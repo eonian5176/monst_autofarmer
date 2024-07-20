@@ -16,18 +16,20 @@ def resize(img: npt.NDArray[np.uint8], scale: float, method: int=cv2.INTER_AREA)
     # resize image
     return cv2.resize(img, dim, interpolation = method)
 
-def template_match(image_path: Path, template_path: Path, threshold: float=0.5) -> Optional[Point]:
+def template_match(image_path: Path, template_path: Path, grayscale_match:bool=True, threshold: float=0.5) -> Optional[Point]:
     """
     finds small template (image) in larger image using cross correlation
     """
     image = cv2.imread(image_path)
     template = cv2.imread(template_path)
 
-    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    if grayscale_match:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 
-    result = cv2.matchTemplate(image_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+    result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
     print(result.max())
+    print(result.shape)
     if np.max(result) < threshold:
         return
 
