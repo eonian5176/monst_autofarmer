@@ -1,6 +1,10 @@
 import os
+import io
 import subprocess
-
+import numpy as np
+import numpy.typing as npt
+import cv2
+from PIL import Image
 from utils import Point
 from typing import Iterable
 from pathlib import Path
@@ -52,13 +56,30 @@ class ADBUtils:
         calls an adb process to take screenshot and save it to a given path with
         a specified screenshot format, default png
         """
+        commands = ["adb", "exec-out", "screencap"]
+        if screenshot_format == "png":
+            commands.append("-p")
+
         write_path = os.path.join(save_path, f"{screenshot_name}.{screenshot_format}")
-        result = subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True)
+        result = subprocess.run(commands, capture_output=True)
 
         result.check_returncode()
 
         with open(write_path, "wb") as file:
             file.write(result.stdout)
+
+    def take_screenshot_numpy(self) -> npt.NDArray[np.uint8]:
+        """
+        returns screenshot as numpy array, skipping overhead of converting to png
+        and various disk operations
+        """
+        result = subprocess.run(["adb", "exec-out", "screencap"], capture_output=True)
+
+        result.check_returncode()
+
+        img_array = np.frombuffer(result.stdout[12:-4], dtype=np.uint8).reshape((self.screen_height, self.screen_width, 4))
+
+        return cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
     def pct_to_point(self, pct_x: float, pct_y: float) -> Point:
         """

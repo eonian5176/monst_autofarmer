@@ -8,16 +8,13 @@ import cv2
 import pandas as pd
 import sys
 
-# screenshot_name = sys.argv[1]
-# device = ADBUtils.from_device()
-# device.take_screenshot(Path(os.getcwd()), screenshot_name=screenshot_name)
 
 unit = sys.argv[1]
 
-unit_centers = pd.read_csv("ball art/centers.csv", dtype={"unit": "string", "x": "int32", "y": "int32"}).set_index("unit")
+unit_centers = pd.read_csv("unit number art/offsets.csv", dtype={"icon": "int32", "x": "int32", "y": "int32"}).set_index("unit")
 
 # device.swipe_relative((0.3, 0.3), (0.5, 0.5))
-start_pt = template_match(image_path="monst_battle.png", template_path=f"ball art/{unit}.png", grayscale_match=False, threshold=0.4)
+start_pt = template_match(image_path="unit number art/full.png", template_path=f"unit number art/{unit}.png", grayscale_match=False, threshold=0.7)
 center_offset_data = unit_centers.loc[unit]
 unit_coords = (start_pt[1] + center_offset_data["x"], start_pt[0] + center_offset_data["y"])
 print(unit_coords)
