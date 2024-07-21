@@ -6,6 +6,7 @@ import cv2
 from utils import Point, ImageObject, np_rmse
 from pathlib import Path
 from functools import cached_property
+from skimage.metrics import structural_similarity as ssim
 
 class MonstDatabase:
     ball_arts: dict[str, ImageObject]
@@ -135,25 +136,29 @@ class MonstBattleState:
         looks at battle_img and compares it to monst_db.turn_border_imgs and
         monst_db.turn_border_badged_imgs to find the most likely candidate
         active player (who is supposed to move in the img)
+
+        note:
+        ssim seem to work much better than rmse for now
         """
         normal_diff = [
-            np_rmse(
+            ssim(
                 self.turn_borders[i], 
                 self.monst_db.turn_border_imgs[i], 
+                channel_axis=2
             ) for i in range(1, 5)
         ]
         
         badged_diff = [
-            np_rmse(
+            ssim(
                 self.turn_borders[i], 
-                self.monst_db.turn_border_badged_imgs[i], 
+                self.monst_db.turn_border_badged_imgs[i],
+                channel_axis=2
             ) for i in range(1, 5)
         ]
 
-
-        player_diff = np.array([normal_diff, badged_diff], dtype=np.float64).min(axis=0)
+        player_diff = np.array([normal_diff, badged_diff], dtype=np.float64).max(axis=0)
         print(player_diff)
-        return player_diff.argmax()+1
+        return player_diff.argmin()+1
 
 
 
