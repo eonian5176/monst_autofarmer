@@ -26,7 +26,7 @@ def template_match(
     image: ImageObject, 
     template: ImageObject, 
     method: int=cv2.TM_CCOEFF_NORMED, 
-    grayscale_match:bool=True, 
+    grayscale_match:bool=False, 
     threshold: Optional[float]=None
 ) -> tuple[int, int, int]:
     """

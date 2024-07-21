@@ -22,7 +22,7 @@ class ADBUtils:
         given a coord, check if it is valid for the device specification, return
         coord if valid, else throw error
         """
-        if not (0 <= coord.x <= self.screen_width and 0 <= coord.y <= self.screen_height):
+        if not (0 <= coord[0] <= self.screen_width and 0 <= coord[1] <= self.screen_height):
             raise ValueError(f"({coord[0]}, {coord[1]}) out of screen scope ({self.screen_width},{self.screen_height})")
         
         return coord

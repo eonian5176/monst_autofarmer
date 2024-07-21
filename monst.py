@@ -3,10 +3,12 @@ import numpy as np
 import numpy.typing as npt
 import os
 import cv2
-from utils import Point, ImageObject, np_rmse
+from utils import Point, ImageObject, np_rmse, template_match, TemplateMatchError
 from pathlib import Path
 from functools import cached_property
 from skimage.metrics import structural_similarity as ssim
+from typing import Optional
+import math
 
 class MonstDatabase:
     ball_arts: dict[str, ImageObject]
@@ -116,12 +118,44 @@ class MonstBattleState:
     battle_img: ImageObject
     monst_db: MonstDatabase
 
+    SWIPE_CIRCLE_CENTER = (540, 920)
+    SWIPE_CIRCLE_RADIUS = 500
+
     def __init__(self, battle_img: ImageObject, monst_db: MonstDatabase):
         self.battle_img = battle_img
         self.monst_db = monst_db
 
+    @staticmethod
+    def _calculate_angle(from_pt: Point, to_pt: Point):
+        """
+        returns angle in radians of arrow from from_pt to to_pt
+        """
+        delta_x = to_pt[0] - from_pt[0]
+        delta_y = to_pt[1] - from_pt[1]
+        angle = math.atan2(delta_y, delta_x)
+        return angle
+    
+    @staticmethod
+    def _calculate_swipe_coords(from_pt: Point, to_pt: Point) -> tuple[Point, Point]:
+        """
+        angle refers to the direction from from_pt to to_pt, so adding angular
+        projection attains endpoint (2), and subtracting attains start (1)
+        """
+        angle = MonstBattleState._calculate_angle(from_pt, to_pt)
+
+        x_diff = MonstBattleState.SWIPE_CIRCLE_RADIUS*math.cos(angle)
+        y_diff =MonstBattleState.SWIPE_CIRCLE_RADIUS*math.sin(angle)
+
+        x2 = round(MonstBattleState.SWIPE_CIRCLE_CENTER[0] + x_diff)
+        y2 = round(MonstBattleState.SWIPE_CIRCLE_CENTER[1] + y_diff)
+
+        x1 = round(MonstBattleState.SWIPE_CIRCLE_CENTER[0] - x_diff)
+        y1 = round(MonstBattleState.SWIPE_CIRCLE_CENTER[1] - y_diff)
+
+        return ((x1, y1), (x2, y2))
+
     @cached_property
-    def turn_borders(self) -> dict[int, ImageObject]:
+    def _turn_borders(self) -> dict[int, ImageObject]:
         """extracts the 4 portions of battle_img corresponding to turn borders"""
         borders = {}
         for i in range(1, 5):
@@ -142,7 +176,7 @@ class MonstBattleState:
         """
         normal_diff = [
             ssim(
-                self.turn_borders[i], 
+                self._turn_borders[i], 
                 self.monst_db.turn_border_imgs[i], 
                 channel_axis=2
             ) for i in range(1, 5)
@@ -150,17 +184,38 @@ class MonstBattleState:
         
         badged_diff = [
             ssim(
-                self.turn_borders[i], 
+                self._turn_borders[i], 
                 self.monst_db.turn_border_badged_imgs[i],
                 channel_axis=2
             ) for i in range(1, 5)
         ]
 
         player_diff = np.array([normal_diff, badged_diff], dtype=np.float64).max(axis=0)
-        print(player_diff)
         return player_diff.argmin()+1
 
+    @cached_property
+    def player_coords(self) -> dict[int, Point]:
+        """
+        return dict of player ball locations for player turn icons template match can
+        find using a .8 threshold
+        """
+        player_coords = {}
 
+        for i in range(1,5):
+            try:
+                turn_icon_x, turn_icon_y, _ = template_match(self.battle_img, self.monst_db.turn_icon_arts[i], threshold=0.8)
+                player_coords[i] = (turn_icon_x + self.monst_db.turn_icon_offsets[i][0], turn_icon_y + self.monst_db.turn_icon_offsets[i][1])
+            except TemplateMatchError:
+                pass
+        
+        return player_coords
+    
+    
+
+    
+
+
+        
 
 
 
