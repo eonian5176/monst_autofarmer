@@ -1,0 +1,14 @@
+the 8 pictures in folder are portion of screen that vary minimally when it is not the units turn
+
+4 are cases without badge and 4 are cases with.
+
+when running program, to determine whos turn it is:
+
+1. Extract all 4 portion of the screen for the 4 units from the single battle image
+
+2. match 1p with the 2 images for 1p (badge/no badge), and so on
+
+3. there should be 3 units that surpass the match threshold and one that fails, the failed one will be the one moving
+(if any other situation happen, throw error)
+
+3 (maybe better alternative). Rank the similarity in desc order, one with weakest similarity is the unit who is on its turn

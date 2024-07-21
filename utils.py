@@ -3,9 +3,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 import numpy.typing as npt
+import math
 from matplotlib import pyplot as plt
+from typing import Any
 
 Point = tuple[int, int]
+ImageObject = npt.NDArray[np.uint8]
+
+class TemplateMatchError(Exception):
+    pass
 
 def resize(img: npt.NDArray[np.uint8], scale: float, method: int=cv2.INTER_AREA) -> npt.NDArray[np.uint8]:
     """convenient wrapper"""
@@ -16,27 +22,45 @@ def resize(img: npt.NDArray[np.uint8], scale: float, method: int=cv2.INTER_AREA)
     # resize image
     return cv2.resize(img, dim, interpolation = method)
 
-def template_match(image_path: Path, template_path: Path, grayscale_match:bool=True, threshold: float=0.5) -> Optional[Point]:
+def template_match(
+    image: ImageObject, 
+    template: ImageObject, 
+    method: int=cv2.TM_CCOEFF_NORMED, 
+    grayscale_match:bool=True, 
+    threshold: Optional[float]=None
+) -> tuple[int, int, int]:
     """
-    finds small template (image) in larger image using cross correlation
-    """
-    image = cv2.imread(image_path)
-    template = cv2.imread(template_path)
+    wrapper around template match with grayscale conversion feature and returning
+    first position of max.
 
+    if threshold used, throw TemplateMatchError if no match found
+
+    returns:
+    x: x-coord of first max corr
+    y: y-coord of first max corr
+    corr: max correlation value
+    """
     if grayscale_match:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        tmpl = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    else:
+        img = image
+        tmpl = template
 
-    result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-    print(result.max())
-    print(result.shape)
-    if np.max(result) < threshold:
-        return
+    result = cv2.matchTemplate(img, tmpl, method)
+
+    max_corr = np.max(result)
+    if threshold is not None and max_corr < threshold:
+        raise TemplateMatchError(f"template not found using threshold {threshold}")
 
     match_start_point = np.unravel_index(np.argmax(result), shape = result.shape)
 
     assert len(match_start_point) == 2
 
-    return match_start_point
+    return (match_start_point[1], match_start_point[0], max_corr)
 
-
+def np_rmse(arr1: npt.NDArray[Any], arr2: npt.NDArray[Any]) -> np.float64:
+    if arr1.shape != arr2.shape:
+        raise ValueError("rmse arrays shape not identical")
+    
+    return np.sqrt(np.mean((arr2-arr1)**2))

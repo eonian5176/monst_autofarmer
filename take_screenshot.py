@@ -10,7 +10,7 @@ from adb_utils import ADBUtils
 screenshot_name = sys.argv[1]
 device = ADBUtils(screen_width=1080, screen_height=2340)
 print(device.screen_width, device.screen_height)
-
+device.take_screenshot(os.getcwd(), screenshot_name)
 st = time.time()
 # device.take_screenshot(Path(os.getcwd()), screenshot_name=screenshot_name, screenshot_format="png")
 np_array = device.take_screenshot_numpy()
