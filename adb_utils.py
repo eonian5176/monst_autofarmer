@@ -6,7 +6,7 @@ import numpy.typing as npt
 import cv2
 from PIL import Image
 from utils import Point
-from typing import Iterable
+from typing import Iterable, Optional
 from pathlib import Path
 
 class ADBUtils:
@@ -100,12 +100,17 @@ class ADBUtils:
         """
         self.tap(self.pct_to_point(pct_x, pct_y))
 
-    def swipe(self, start: Point, end: Point) -> None:
+    def swipe(self, start: Point, end: Point, motion_time: Optional[int]=None) -> None:
         """
         swipe exact coords on screen
+        motion time: how long the swipe motion takes in ms
         """
         self.validate_coords([start, end])
-        subprocess.run(["adb", "shell", "input", "swipe", str(start[0]), str(start[1]), str(end[0]), str(end[1])])
+
+        cmd_list = ["adb", "shell", "input", "swipe", str(start[0]), str(start[1]), str(end[0]), str(end[1])]
+        if motion_time:
+            cmd_list.append(str(motion_time))
+        subprocess.run(cmd_list)
 
     def swipe_relative(self, start_pcts: tuple[float, float], end_pcts: tuple[float, float]) -> None:
         """

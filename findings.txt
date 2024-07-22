@@ -1,0 +1,9 @@
+During the screen where entering boss stage:
+ssms on the turn border outputs ~0.5 similarity value, which means cutoff could
+be 0.9 or even 0.8 to determine if it is not that units turn
+(if it is not a unit turn, similarity for that unit should be > 0.9 always)
+
+thus logic could be:
+if all(ssms) < 0.9 -> infer that no one is moving as we are in enter boss state
+if all(ssms) > 0.9 -> also infer no one is moving, as we are in regular stage transition
+if any 1 players turn currently, 3 should be > 0.9 and the moving player << 0.9

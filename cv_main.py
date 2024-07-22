@@ -20,7 +20,6 @@ for box in boxes_str.splitlines():
     y1, y2 = h-y1, h-y2
     print(x1, y1, x2, y2)
     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 5)
-    cv2.putText(img, box[0], (x,))
 
 cv2.imshow("hello", img)
 cv2.waitKey(0)

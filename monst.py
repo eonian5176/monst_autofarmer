@@ -14,7 +14,7 @@ class MonstDatabase:
     ball_arts: dict[str, ImageObject]
     ball_centers: dict[str, Point]
 
-    turn_icon_arts: dict[int, ImageObject]
+    turn_icon_arts: dict[int, list[ImageObject]]
     icon_to_ball_offsets: dict[int, Point]
 
     turn_border_imgs: dict[int, ImageObject]
@@ -43,10 +43,21 @@ class MonstDatabase:
         return ball_centers
     
     @staticmethod
-    def fetch_turn_icons(turn_icons_path: Path) -> dict[str, ImageObject]:
-        turn_icon_arts = {}
+    def fetch_turn_icons(turn_icons_path: Path) -> dict[str, list[ImageObject]]:
+        """
+        1p has 1 art- red
+        2p has 2 art- red, yellow
+        3p has 3 art- red, yellow, green
+        3p has 4 art- red, yellow, green, blue
+        """
+        turn_icon_arts: dict[int, list[ImageObject]] = {}
         for i in range(1, 5):
-            turn_icon_arts[i] = cv2.imread(os.path.join(turn_icons_path, f"{i}p.png"))
+            turn_icon_arts[i] = []
+
+            for suffix in ["", "_y", "_b", "_g"]:
+                art_full_path = os.path.join(turn_icons_path, f"{i}p" + suffix + ".png")
+                if os.path.exists(art_full_path):
+                    turn_icon_arts[i].append(cv2.imread(art_full_path))
 
         return turn_icon_arts
 
@@ -173,6 +184,9 @@ class MonstBattleState:
 
         note:
         ssim seem to work much better than rmse for now
+
+        ssim works so well that it should be able to tell if no bumps exist, then it
+        means no player turn right now, which we can skip the motion
         """
         normal_diff = [
             ssim(
@@ -191,6 +205,7 @@ class MonstBattleState:
         ]
 
         player_diff = np.array([normal_diff, badged_diff], dtype=np.float64).max(axis=0)
+        print(player_diff)
         return player_diff.argmin()+1
 
     @cached_property
@@ -198,16 +213,28 @@ class MonstBattleState:
         """
         return dict of player ball locations for player turn icons template match can
         find using a .8 threshold
+
+        if none of the templates for a player's icon can match battle img above 
+        threshold, that player will not exist in dict
         """
         player_coords = {}
 
-        for i in range(1,5):
-            try:
-                turn_icon_x, turn_icon_y, _ = template_match(self.battle_img, self.monst_db.turn_icon_arts[i], threshold=0.8)
-                player_coords[i] = (turn_icon_x + self.monst_db.turn_icon_offsets[i][0], turn_icon_y + self.monst_db.turn_icon_offsets[i][1])
-            except TemplateMatchError:
-                pass
-        
+        for player in range(1,5):
+            coords = []
+            coeffs = []
+            for img in self.monst_db.turn_icon_arts[player]:
+                try:
+                    x, y, coeff = template_match(self.battle_img, img, threshold=0.8)
+                    coords.append((x,y))
+                    coeffs.append(coeff)
+                except TemplateMatchError:
+                    pass
+
+            if coords:
+                max_coeff_idx = np.array(coeffs, np.float64).argmax()
+                turn_icon_x, turn_icon_y = coords[max_coeff_idx]
+                player_coords[player] = (turn_icon_x + self.monst_db.turn_icon_offsets[player][0], turn_icon_y + self.monst_db.turn_icon_offsets[player][1])
+
         return player_coords
     
     
