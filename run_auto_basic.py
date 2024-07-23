@@ -4,7 +4,7 @@ import cv2
 from monst import MonstDatabase, MonstBattleState
 from adb_utils import ADBUtils
 
-POLL_DELAY = 5
+POLL_DELAY = 4
 DEBUG_MODE = False
 
 db = MonstDatabase("config")
